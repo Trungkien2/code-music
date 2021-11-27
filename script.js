@@ -22,15 +22,18 @@
  7.Next/Repeat when ended -done
  8.Active songs - done
  9. Scroll active song into view - done
- 10. Play Song when click
+ 10. Play Song when click - done
   */
  /**
   * Fix Bug
-1. Hạn chế tối đa các bài hát bị lặp lại
-2. Fix lỗi khi tua bài hát, click giữ một chút sẽ thấy lỗi, vì event updatetime nó liên tục chạy dẫn tới lỗi
+1. Hạn chế tối đa các bài hát bị lặp lại - done
+2. Fix lỗi khi tua bài hát, click giữ một chút sẽ thấy lỗi, vì event updatetime nó liên tục chạy dẫn tới lỗi --done--  sử dụng event input thay vì change
 3. Fix lỗi khi next tới 1-3 bài đầu danh sách thì không “scroll into view”
 4. Lưu lại vị trí bài hát đang nghe, F5 lại ứng dụng không bị quay trở về bài đầu tiên
 5. Thêm chức năng điều chỉnh âm lượng, lưu vị trí âm lượng người dùng đã chọn. Mặc định 100%
+6. Fix lỗi khi dừng bài hát và bấm vào next và prev thì đổi icon phải đổi và ở laanf đàu tiên phải bấm dừng được - done - kêu playbtn tự gọi lại hàm click
+7. Fix lỗi khi ramdom active nhưng bấm next kh chạy - done
+8. Fix lỗi khi click vào playlisst nhưng kh audio kh chạy - done
   */
 
  const app = {
@@ -38,6 +41,7 @@
    isPlaying : false,
    isRandom : false,
    isReapeat : false,
+   arrSongs : [],
    songs : [ 
      {
       name : 'Phi hành gia',
@@ -94,6 +98,7 @@
       image : './asset/img/song3.jpg'
      },
    ],
+   // hàm render ra view
    render : function(){
      const htmls = this.songs.map((song,index)=>{
        return `
@@ -137,7 +142,6 @@
  
     playsbtn.onclick = function (){
       if(_this.isPlaying){
-        
         audio.pause();
       }else{
        
@@ -155,78 +159,86 @@
         player.classList.remove('playing');
         cdThumpAnimted.pause();
       }
-      // xử lý khi thanh range
-      audio.ontimeupdate = function (){
-        if(audio.duration){
-          const currentProgess= Math.floor(audio.currentTime/audio.duration *100);
-          progress.value = currentProgess;
-        }
+      
+    }
+    // xử lý khi thanh range
+    audio.ontimeupdate = function (){
+      if(audio.duration){
+        const currentProgess= Math.floor(audio.currentTime/audio.duration *100);
+        progress.value = currentProgess;
       }
-      // xử lý khi tua
-      progress.onchange = function(e){
-        const seekTime = audio.duration/100 * e.target.value;
-        audio.currentTime = seekTime;
-      }
-      // xử lý khi next bài hát
-      nextBtn.onclick = function(){
-        if(_this.isRandom){
-            _this.playRandomSong();
-        }else{
-          
-          _this.nextSong();
-        }
-        audio.play();
-        _this.render();
-        _this.scrollActiveSong();
-      }
-      // xử lý khi prev bài hát 
-      prevBtn.onclick = function (){
-        if(_this.isRandom){
+    }
+    // xử lý khi tua
+    // xử dụng oninput thay vì onchange
+    // https://stackoverflow.com/questions/18544890/onchange-event-on-input-type-range-is-not-triggering-in-firefox-while-dragging
+    // Apparently Chrome and Safari are wrong: onchange should only be triggered when the user releases the mouse. 
+    //To get continuous updates, you should use the oninput event, which will capture live updates in Firefox, Safari and Chrome, both from the mouse and the keyboard.
+    progress.oninput = function(e){
+      const seekTime = audio.duration/100 * e.target.value;
+      audio.currentTime = seekTime;
+    }
+    // xử lý khi next bài hát
+    nextBtn.onclick = function(){
+      if(_this.isRandom){
           _this.playRandomSong();
-        }else{
-          _this.prevSong();
+          playsbtn.click();
+      }else{
+        _this.nextSong();
+        playsbtn.click();
+      } 
+      audio.play();
+      _this.render();
+      _this.scrollActiveSong();
+    }
+    // xử lý khi prev bài hát 
+    prevBtn.onclick = function (){
+      if(_this.isRandom){
+        _this.playRandomSong();
+        playsbtn.click();
+      }else{
+        _this.prevSong();
+        playsbtn.click();
+      }
+      audio.play();
+      _this.render();
+      _this.scrollActiveSong();
+    }
+    // random bài hát 
+    randomBtn.onclick = () => {
+     _this.isRandom = !_this.isRandom;
+     randomBtn.classList.toggle('active',_this.isRandom);
+    }
+    // repeat lại bài hát
+    repeatBtn.onclick = function(){
+      _this.isReapeat = !_this.isReapeat;
+      repeatBtn.classList.toggle('active',_this.isReapeat);
+    }
+
+    // tự next bài hát khi ended
+    audio.onended = function(){
+      if(_this.isReapeat){
+        audio.play();
+      }
+      else
+      // cách 1 tư đọng bấm net
+         nextBtn.click();
+      // cách hay là gọi lại hàm next tbn
+      // cách này hơi dài dòng
+    }
+    // chuyển bài hát khi click vào playlist
+    playlist.onclick = function (e){
+      const clickSong = e.target.closest('.song:not(.active)');
+      if(clickSong || e.target.closest('.option')){
+        // xử lý khi click vào xong
+        if(clickSong){
+         _this.currentIndex = Number(clickSong.dataset.index);
+         _this.loadCurrentSong();
+         _this.render();
+         playsbtn.click();
         }
         audio.play();
-        _this.render();
-        _this.scrollActiveSong();
+        // xử lý khi click vào options
       }
-      // random bài hát 
-      randomBtn.onclick = () => {
-       _this.isRandom = !_this.isRandom;
-       randomBtn.classList.toggle('active',_this.isRandom);
-      }
-      // repeat lại bài hát
-      repeatBtn.onclick = function(){
-        _this.isReapeat = !_this.isReapeat;
-        repeatBtn.classList.toggle('active',_this.isReapeat);
-      }
-
-      // tự next bài hát khi ended
-      audio.onended = function(){
-        if(_this.isReapeat){
-          audio.play();
-        }
-        else
-        // cách 1 tư đọng bấm net
-           nextBtn.click();
-        // cách hay là gọi lại hàm next tbn
-        // cách này hơi dài dòng
-      }
-      // chuyển bài hát khi click vào playlist
-      playlist.onclick = function (e){
-        const clickSong = e.target.closest('.song:not(.active)');
-        if(clickSong || e.target.closest('.option')){
-          // xử lý khi click vào xong
-          if(clickSong){
-           _this.currentIndex = Number(clickSong.dataset.index);
-           _this.loadCurrentSong();
-           _this.render();
-           audio.play();
-          }
-          // xử lý khi click vào options
-        }
-      }
-
     }
     
    },
@@ -253,11 +265,22 @@
         audio.src =this.currentSong.path;
   },
   playRandomSong: function (){
-    var newIndex =  Math.floor(Math.random() * this.songs.length);
-    do{
+        // hạn chế tối đa lần lặp lại bài hát khi random
+        // B1. tạo ra 1 mảng rỗng và sau đó push currentIndex vào
+        // B2. tạo ra biến new index mới và dùng vòng lặp 
+        // B4. dk dừng cảu loop ta dùng methods includes để kiểm tra nếu có phần tử bằng v phần tử trong mảng mah ta đã push thì dừng
+        // B5. vì muốn hạn chế tối dda lần lặp cho nên ta phải kiểm tra độ dài cua mảng mới nếu nó bằng v độ dài của mảng dữ liệu thì ta
+        //     sẽ clean mảng đó đi bằng cách gắn  lại cho nó thành mảng mới 
+        this.arrSongs.push(this.currentIndex);
+        if(this.arrSongs.length=== this.songs.length){
+          this.arrSongs = [];
+        }
+        let newIndex ; 
+        do{
+          newIndex =Math.floor(Math.random() * this.songs.length);
+        }while(this.arrSongs.includes(newIndex))
         this.currentIndex = newIndex;
-    }while(newIndex === this.songs.length)
-    this.loadCurrentSong();
+        this.loadCurrentSong();
   },
   scrollActiveSong: function(){
     setTimeout(()=>{
