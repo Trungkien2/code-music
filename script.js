@@ -11,7 +11,8 @@
  const prevBtn = $('.btn-prev');
  const repeatBtn = $('.btn-repeat');
  const randomBtn = $('.btn-random');
- 
+ const dashboard = $('.dashboard');
+ const volume = $('.volume'); 
  /**
  1. render songs-done
  2. scroll top -done
@@ -28,9 +29,9 @@
   * Fix Bug
 1. Hạn chế tối đa các bài hát bị lặp lại - done
 2. Fix lỗi khi tua bài hát, click giữ một chút sẽ thấy lỗi, vì event updatetime nó liên tục chạy dẫn tới lỗi --done--  sử dụng event input thay vì change
-3. Fix lỗi khi next tới 1-3 bài đầu danh sách thì không “scroll into view”
+3. Fix lỗi khi next tới 1-3 bài đầu danh sách thì không “scroll into view” -done
 4. Lưu lại vị trí bài hát đang nghe, F5 lại ứng dụng không bị quay trở về bài đầu tiên
-5. Thêm chức năng điều chỉnh âm lượng, lưu vị trí âm lượng người dùng đã chọn. Mặc định 100%
+5. Thêm chức năng điều chỉnh âm lượng-done, lưu vị trí âm lượng người dùng đã chọn. Mặc định 100%
 6. Fix lỗi khi dừng bài hát và bấm vào next và prev thì đổi icon phải đổi và ở laanf đàu tiên phải bấm dừng được - done - kêu playbtn tự gọi lại hàm click
 7. Fix lỗi khi ramdom active nhưng bấm next kh chạy - done
 8. Fix lỗi khi click vào playlisst nhưng kh audio kh chạy - done
@@ -167,6 +168,8 @@
         const currentProgess= Math.floor(audio.currentTime/audio.duration *100);
         progress.value = currentProgess;
       }
+      
+       
     }
     // xử lý khi tua
     // xử dụng oninput thay vì onchange
@@ -240,8 +243,19 @@
         // xử lý khi click vào options
       }
     }
+    // xử lý âm thanh 
+    volume.onchange = function(e){
+       const currentVolume = e.target.value *0.01;
+       audio.volume = currentVolume;
+       console.log(audio.volume);
+    
+    }
+    audio.onvolumechange = function(){
+        audio.volume;
+    }
     
    },
+    
    nextSong : function(){
     this.currentIndex++;
     if(this.currentIndex>this.songs.length-1){
@@ -284,10 +298,20 @@
   },
   scrollActiveSong: function(){
     setTimeout(()=>{
+      if(this.currentIndex==0){
         $('.song.active').scrollIntoView({
-          behavior : 'smooth',
-          block : 'nearest',
+          behavior: "smooth",
+          block: "end"
         })
+      }
+     
+      else{
+        $('.song.active').scrollIntoView({
+          behavior: "smooth",
+          block: "nearest"
+        })
+      }
+       
     },200)
   }
   ,
